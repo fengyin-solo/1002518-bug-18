@@ -38,15 +38,20 @@
         <tr v-for="row in rows" :key="String(row.id)">
           <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
           <td class="row-actions">
-            <button
-              v-for="action in actions"
-              :key="action"
-              class="link"
-              type="button"
-              @click="runAction(action, row)"
-            >
-              {{ action }}
-            </button>
+            <RouterLink class="link" :to="`/balise/${row.id}`">查看详情</RouterLink>
+            <!-- 已更换是终态，不再参与任何固定状态变更 -->
+            <template v-if="row['应答器状态'] !== '已更换'">
+              <button
+                v-for="action in actions"
+                :key="action"
+                class="link"
+                type="button"
+                @click="runAction(action, row)"
+              >
+                {{ action }}
+              </button>
+            </template>
+            <span v-else class="muted-text">已更换，不可操作</span>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -63,23 +68,30 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import { request } from '@/api/client'
 
-type Row = Record<string, string | number | null>
+type Row = Record<string, string | number | boolean | null>
 
 const ENDPOINT = '/api/balise'
 const columns = ["应答器编号", "所在位置", "报文版本", "激活距离", "接收电平", "安装方式", "固定状态", "应答器状态"]
 const actions = ["登记异常", "重新固定", "办理更换"]
-const statuses = ["正常", "报文异常", "松动偏移", "已更换"]
-const stats = [{"label": "正常应答器", "value": 0}, {"label": "异常应答器", "value": 0}, {"label": "偏移应答器", "value": 0}]
 
 const rows = ref<Row[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+
+const stats = computed(() => {
+  const count = (status: string) => rows.value.filter((row) => row['应答器状态'] === status).length
+  return [
+    { label: '正常应答器', value: count('正常') },
+    { label: '异常应答器', value: count('报文异常') },
+    { label: '偏移应答器', value: count('松动偏移') },
+  ]
+})
 
 function resetFilters() {
   filters.value = {}
@@ -99,10 +111,15 @@ async function runAction(action: string, row: Row) {
   try {
     const response = await request(`${ENDPOINT}/${row.id}/actions`, {
       method: 'POST',
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ values: { action } }),
     })
-    if (!response.ok) {
-      throw new Error('应答器动作未生效，请稍后重试')
+    const payload = (await response.json().catch(() => null)) as
+      | { ok?: boolean; message?: string }
+      | null
+    // 后端业务拦截（如对已更换应答器重新固定）返回 200 + ok:false，
+    // 必须按失败处理，不能静默当成成功刷新。
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.message || '应答器动作未生效，请稍后重试')
     }
     await reload()
   } catch (error) {
@@ -118,7 +135,7 @@ async function reload() {
     if (!response.ok) {
       throw new Error('应答器列表读取失败')
     }
-    const payload = await response.json()
+    const payload = (await response.json()) as { items?: Row[]; total?: number }
     rows.value = payload.items ?? []
     total.value = payload.total ?? rows.value.length
   } catch (error) {
@@ -128,3 +145,10 @@ async function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.muted-text {
+  color: var(--muted);
+  font-size: 12px;
+}
+</style>

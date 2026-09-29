@@ -19,6 +19,9 @@ class ActionResult(BaseModel):
     ok: bool
     message: str
     entry: dict[str, Any] | None = None
+    # 并发修改时置 True：本次保存未生效，latest 为服务端当前数据，便于前端提示对比。
+    conflict: bool = False
+    latest: dict[str, Any] | None = None
 
 
 class EntryPayload(BaseModel):

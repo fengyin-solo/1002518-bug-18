@@ -9,6 +9,7 @@ const Cable = () => import('@/views/cable/index.vue')
 const Powersupply = () => import('@/views/powersupply/index.vue')
 const Atp = () => import('@/views/atp/index.vue')
 const Balise = () => import('@/views/balise/index.vue')
+const BaliseDetail = () => import('@/views/balise/detail.vue')
 const Axlecounter = () => import('@/views/axlecounter/index.vue')
 const Dispatchcenter = () => import('@/views/dispatchcenter/index.vue')
 const Maintenancewindow = () => import('@/views/maintenancewindow/index.vue')
@@ -34,6 +35,7 @@ const router = createRouter({
     { path: '/powersupply', name: 'powersupply', component: Powersupply },
     { path: '/atp', name: 'atp', component: Atp },
     { path: '/balise', name: 'balise', component: Balise },
+    { path: '/balise/:id', name: 'balise-detail', component: BaliseDetail },
     { path: '/axlecounter', name: 'axlecounter', component: Axlecounter },
     { path: '/dispatchcenter', name: 'dispatchcenter', component: Dispatchcenter },
     { path: '/maintenancewindow', name: 'maintenancewindow', component: Maintenancewindow },
